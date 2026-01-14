@@ -2,6 +2,12 @@
 #
 # Helm release for kiali-server
 #
+# Integration defaults:
+# - Prometheus integration for metrics (kube-prometheus-stack)
+# - Grafana integration for dashboards
+# - Tempo integration for distributed tracing (via Jaeger gRPC API)
+# - Istio namespace detection
+#
 
 {{- $k := $state.kiali }}
 
@@ -28,6 +34,33 @@ spec:
     values:
       fullnameOverride: kiali
       nameOverride: kiali
+      # Istio configuration
+      istio_namespace: istio-system
+      # External services integration
+      external_services:
+        prometheus:
+          url: "http://kube-prometheus-stack-prometheus.monitoring:9090"
+        grafana:
+          enabled: true
+          in_cluster_url: "http://kube-prometheus-stack-grafana.monitoring:80"
+          url: ""  # Set to external URL if Grafana is exposed
+        tracing:
+          enabled: true
+          # Tempo with Jaeger gRPC API (Kiali 1.78+ supports this)
+          provider: tempo
+          in_cluster_url: "http://tempo.monitoring:3100"
+          use_grpc: false  # Use HTTP API for Tempo
+          # For Tempo, we use the query frontend
+          tempo_config:
+            org_id: ""
+      # Authentication - anonymous for initial setup, configure auth separately
+      auth:
+        strategy: anonymous
+      # Deployment settings
+      deployment:
+        accessible_namespaces:
+          - "**"  # All namespaces
+        view_only_mode: false
       {{- if $k.values }}
       {{- toYaml $k.values | nindent 6 }}
       {{- end }}

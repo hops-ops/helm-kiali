@@ -1,3 +1,4 @@
+import models.ai.com.ops.hops.helm.v1alpha1 as helmv1alpha1
 import models.io.upbound.dev.meta.v1alpha1 as metav1alpha1
 import models.k8s.apimachinery.pkg.apis.meta.v1 as metav1
 
@@ -20,13 +21,9 @@ _items = [
             xrdPath = "apis/kialis/definition.yaml"
             timeoutSeconds = 60
             validate = False
-            xr = {
-                apiVersion = "helm.hops.ops.com.ai/v1alpha1"
-                kind = "Kiali"
+            xr = helmv1alpha1.Kiali {
                 metadata.name = "test-kiali"
-                spec = {
-                    clusterName = "test-cluster"
-                }
+                spec.clusterName = "test-cluster"
             }
             assertResources = [
                 {
@@ -48,16 +45,12 @@ _items = [
             xrdPath = "apis/kialis/definition.yaml"
             timeoutSeconds = 60
             validate = False
-            xr = {
-                apiVersion = "helm.hops.ops.com.ai/v1alpha1"
-                kind = "Kiali"
+            xr = helmv1alpha1.Kiali {
                 metadata.name = "labeled-kiali"
                 spec = {
                     clusterName = "test-cluster"
-                    labels = {
-                        team = "platform"
-                        environment = "staging"
-                    }
+                    # labels uses x-kubernetes-preserve-unknown-fields, use untyped
+                    labels = {team = "platform", environment = "staging"}
                 }
             }
             assertResources = [
@@ -80,6 +73,7 @@ _items = [
 
     # ==========================================================================
     # Test 3: overrideAllValues replaces defaults
+    # Note: overrideAllValues uses x-kubernetes-preserve-unknown-fields
     # ==========================================================================
     metav1alpha1.CompositionTest {
         metadata.name = "override-all-values"
@@ -88,16 +82,11 @@ _items = [
             xrdPath = "apis/kialis/definition.yaml"
             timeoutSeconds = 60
             validate = False
-            xr = {
-                apiVersion = "helm.hops.ops.com.ai/v1alpha1"
-                kind = "Kiali"
+            xr = helmv1alpha1.Kiali {
                 metadata.name = "override-test"
                 spec = {
                     clusterName = "my-cluster"
-                    overrideAllValues = {
-                        fullnameOverride = "custom-kiali"
-                        auth.strategy = "openid"
-                    }
+                    overrideAllValues = {fullnameOverride = "custom-kiali", auth = {strategy = "openid"}}
                 }
             }
             assertResources = [
@@ -107,7 +96,69 @@ _items = [
                     metadata.name = "override-test"
                     spec.forProvider.values = {
                         fullnameOverride = "custom-kiali"
-                        auth.strategy = "openid"
+                        auth = {strategy = "openid"}
+                    }
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 4: Custom namespace is applied to Helm release
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "custom-namespace"
+        spec = {
+            compositionPath = "apis/kialis/composition.yaml"
+            xrdPath = "apis/kialis/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = helmv1alpha1.Kiali {
+                metadata.name = "namespaced-kiali"
+                spec = {
+                    clusterName = "test-cluster"
+                    namespace = "istio-system"
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "namespaced-kiali"
+                    spec.forProvider.namespace = "istio-system"
+                }
+            ]
+        }
+    }
+
+    # ==========================================================================
+    # Test 5: Custom providerConfigRef is applied
+    # ==========================================================================
+    metav1alpha1.CompositionTest {
+        metadata.name = "custom-provider-config"
+        spec = {
+            compositionPath = "apis/kialis/composition.yaml"
+            xrdPath = "apis/kialis/definition.yaml"
+            timeoutSeconds = 60
+            validate = False
+            xr = helmv1alpha1.Kiali {
+                metadata.name = "custom-provider"
+                spec = {
+                    clusterName = "test-cluster"
+                    providerConfigRef = {
+                        name = "my-helm-provider"
+                        kind = "ProviderConfig"
+                    }
+                }
+            }
+            assertResources = [
+                {
+                    apiVersion = "helm.m.crossplane.io/v1beta1"
+                    kind = "Release"
+                    metadata.name = "custom-provider"
+                    spec.providerConfigRef = {
+                        name = "my-helm-provider"
+                        kind = "ProviderConfig"
                     }
                 }
             ]
