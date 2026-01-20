@@ -40,14 +40,13 @@ jobs:
   test:
     uses: unbounded-tech/workflows-crossplane/.github/workflows/test.yaml@v2.13.0
 
-  e2e:
-    uses: unbounded-tech/workflows-crossplane/.github/workflows/e2e.yaml@v2.13.0
+  # NOTE: No e2e tests - Kiali requires Istio service mesh to be installed,
+  # which makes standalone e2e testing impractical
 
   publish:
     needs:
       - validate
       - test
-      - e2e
     uses: unbounded-tech/workflows-crossplane/.github/workflows/publish.yaml@v2.13.0
     secrets: inherit
     with:
